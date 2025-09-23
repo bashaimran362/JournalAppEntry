@@ -32,7 +32,7 @@ public class JournalEntryService {
 		JournalEntry saved= journalEntryRepository.save(journalEntry);
 		user.getJournalEntries().add(saved);
 		//user.setUserName(null);  //reference if in case exception arrive then transaction will rollback the success crud operation before it
-		userService.saveEntry(user);
+		userService.saveNewUser(user);
 		}
 		catch(Exception e) {
 			System.out.println(e);
@@ -51,11 +51,22 @@ public class JournalEntryService {
 	public Optional<JournalEntry> findById(ObjectId myID) {
 		return journalEntryRepository.findById(myID);
 	}
-	public void deleteById(ObjectId myId, String userName) {
-		 User user = userService.findByUserName(userName);
-		 user.getJournalEntries().removeIf(x -> x.getId().equals(myId));
-		 userService.saveEntry(user);
-		 journalEntryRepository.deleteById(myId);
-	}
+	
+	@Transactional
+    public boolean deleteById(ObjectId id, String userName) {
+        boolean removed = false;
+        try {
+            User user = userService.findByUserName(userName);
+            removed = user.getJournalEntries().removeIf(x -> x.getId().equals(id));
+            if (removed) {
+                userService.saveUser(user);
+                journalEntryRepository.deleteById(id);
+            }
+        } catch (Exception e) {
+            System.out.println(e);
+            throw new RuntimeException("An error occurred while deleting the entry.", e);
+        }
+        return removed;
+    }
 	
 }
